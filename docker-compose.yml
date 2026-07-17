@@ -1,0 +1,51 @@
+services:
+  cowagent:
+    image: ${COWAGENT_IMAGE:-zhayujie/chatgpt-on-wechat@sha256:1982e564243455957e5c39e3bc5b313e2f89a2a39b654a378fdf22cf5991f831}
+    platform: ${COWAGENT_PLATFORM:-linux/amd64}
+    container_name: cowagent-wecom-gpt
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${COWAGENT_BIND_HOST:-127.0.0.1}:${COWAGENT_WEB_PORT:-9899}:9899"
+      - "127.0.0.1:${COWAGENT_LOCAL_WEB_PORT:-19999}:9899"
+    environment:
+      COW_DATA_DIR: /home/agent/cow
+      CHATGPT_ON_WECHAT_EXEC: /opt/cowagent/start-persistent.sh
+      PYTHONPATH: /opt/cowagent
+      COW_STREAMING_PATCH_ENABLED: ${COW_STREAMING_PATCH_ENABLED:-True}
+      PYTHONDONTWRITEBYTECODE: "1"
+      XDG_CACHE_HOME: /tmp/.cache
+      COW_LANG: auto
+      BOT_TYPE: openai
+      MODEL: ${RELAY_MODEL}
+      OPEN_AI_API_KEY: ${RELAY_API_KEY}
+      OPEN_AI_API_BASE: ${RELAY_API_BASE}
+      WEB_HOST: 0.0.0.0
+      WEB_PASSWORD: ${COWAGENT_WEB_PASSWORD}
+      AGENT: ${COWAGENT_AGENT_ENABLED:-False}
+      AGENT_MAX_CONTEXT_TOKENS: ${COWAGENT_MAX_CONTEXT_TOKENS:-20000}
+      AGENT_MAX_CONTEXT_TURNS: ${COWAGENT_MAX_CONTEXT_TURNS:-10}
+      AGENT_MAX_STEPS: ${COWAGENT_MAX_STEPS:-6}
+      SELF_EVOLUTION_ENABLED: ${COWAGENT_SELF_EVOLUTION_ENABLED:-False}
+      SPEECH_RECOGNITION: "False"
+      GROUP_SPEECH_RECOGNITION: "False"
+      VOICE_REPLY_VOICE: "False"
+    volumes:
+      - ./data/cow:/home/agent/cow
+      - ./runtime:/opt/cowagent:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    pids_limit: 256
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

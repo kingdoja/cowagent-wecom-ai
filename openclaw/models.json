@@ -1,0 +1,42 @@
+{
+  "provider": "relay",
+  "dailyAlias": "daily",
+  "models": [
+    {
+      "id": "gpt-5.4-mini",
+      "name": "GPT-5.4 Mini",
+      "alias": "daily",
+      "reasoningEffort": "low",
+      "maxFirstVisibleMs": 15000,
+      "failureExitCode": 31,
+      "daily": true
+    },
+    {
+      "id": "gpt-5.5",
+      "name": "GPT-5.5",
+      "alias": "smart",
+      "reasoningEffort": "medium",
+      "maxFirstVisibleMs": 60000,
+      "failureExitCode": 21,
+      "daily": false
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "name": "GPT-5.6 Sol",
+      "alias": "sol",
+      "reasoningEffort": "high",
+      "maxFirstVisibleMs": 90000,
+      "failureExitCode": 22,
+      "daily": false
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "name": "GPT-5.6 Terra",
+      "alias": "terra",
+      "reasoningEffort": "high",
+      "maxFirstVisibleMs": 120000,
+      "failureExitCode": 23,
+      "daily": false
+    }
+  ]
+}

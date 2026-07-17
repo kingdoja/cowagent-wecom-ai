@@ -1,0 +1,8 @@
+.env
+openclaw/.env
+openclaw/*.local.json*
+openclaw/backups/
+openclaw/test-results/
+data/cow/*
+!data/cow/.gitkeep
+.DS_Store
