@@ -1,6 +1,7 @@
 {
   "provider": "relay",
   "dailyAlias": "daily",
+  "defaultModelId": "gpt-5.6-terra",
   "models": [
     {
       "id": "gpt-5.4-mini",

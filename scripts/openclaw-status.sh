@@ -2,12 +2,17 @@
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/openclaw-common.sh"
+load_openclaw_env
 
 printf 'OpenClaw: %s\n' "$(openclaw --version)"
 printf 'Parallel plugin: %s\n' "$(plugin_version parallel)"
 printf 'Weixin plugin: %s\n' "$(plugin_version openclaw-weixin)"
 printf 'Config: %s\n' "$(openclaw config file)"
-openclaw gateway status || true
+openclaw gateway status --no-probe
+openclaw gateway call health --json --token "$OPENCLAW_GATEWAY_TOKEN" \
+  | jq -e '.ok == true' >/dev/null \
+  || die "authenticated Gateway health RPC failed"
+echo "Authenticated Gateway RPC: ok"
 
 if [[ -x "$TAILSCALE_CLI" ]]; then
   "$TAILSCALE_CLI" serve status || true

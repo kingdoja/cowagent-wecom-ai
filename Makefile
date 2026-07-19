@@ -2,7 +2,7 @@
 	openclaw-install openclaw-host-status openclaw-host-power openclaw-configure openclaw-preflight \
 	openclaw-gateway-install openclaw-start openclaw-stop openclaw-restart openclaw-status \
 	openclaw-audit openclaw-model-gate openclaw-search-gate openclaw-sandbox-gate \
-	openclaw-relay-gate openclaw-accept openclaw-weixin-login openclaw-backup openclaw-rollback
+	openclaw-relay-gate openclaw-image-gate openclaw-accept openclaw-weixin-login openclaw-backup openclaw-rollback
 
 bootstrap:
 	@./scripts/bootstrap.sh
@@ -86,6 +86,9 @@ openclaw-search-gate:
 
 openclaw-sandbox-gate:
 	@./scripts/openclaw-sandbox-gate.sh
+
+openclaw-image-gate:
+	@./scripts/openclaw-image-gate.sh
 
 openclaw-accept:
 	@./scripts/openclaw-accept.sh

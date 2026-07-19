@@ -19,6 +19,7 @@ fi
 
 openclaw plugins install --pin --force "@openclaw/parallel-plugin@${PARALLEL_VERSION}"
 openclaw plugins install --pin --force "@tencent-weixin/openclaw-weixin@${WEIXIN_VERSION}"
+openclaw plugins install --force "$ROOT_DIR/openclaw/plugins/lucen-image"
 
 build_ok=false
 for attempt in 1 2 3; do
@@ -35,4 +36,5 @@ done
 
 printf 'Installed OpenClaw %s, Parallel %s, Weixin %s.\n' \
   "$OPENCLAW_VERSION" "$PARALLEL_VERSION" "$WEIXIN_VERSION"
+printf 'Installed Lucen Image %s.\n' "$LUCEN_IMAGE_VERSION"
 printf 'Built sandbox image %s.\n' "$SANDBOX_IMAGE"

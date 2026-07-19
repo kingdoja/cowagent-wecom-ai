@@ -25,8 +25,23 @@ filevault_enabled || fail "FileVault is off"
   || fail "Parallel plugin must be $PARALLEL_VERSION"
 [[ "$(plugin_version openclaw-weixin 2>/dev/null || true)" == "$WEIXIN_VERSION" ]] \
   || fail "Weixin plugin must be $WEIXIN_VERSION"
+[[ "$(plugin_version lucen-image 2>/dev/null || true)" == "$LUCEN_IMAGE_VERSION" ]] \
+  || fail "Lucen Image plugin must be $LUCEN_IMAGE_VERSION"
+lucen_plugin_runtime="$(openclaw plugins inspect lucen-image --runtime --json 2>/dev/null || printf 'null\n')"
+jq -e '.plugin.status == "loaded"
+  and (.plugin.imageGenerationProviderIds | sort) == ["lucen-image", "openai"]
+  and .diagnostics == []' \
+  <<<"$lucen_plugin_runtime" >/dev/null \
+  || fail "Lucen Image and OpenAI compatibility image providers must both be loaded"
 
 docker image inspect "$SANDBOX_IMAGE" >/dev/null 2>&1 || fail "sandbox image is missing"
+if docker image inspect "$SANDBOX_IMAGE" >/dev/null 2>&1; then
+  docker run --rm --entrypoint /bin/sh "$SANDBOX_IMAGE" -c '
+    command -v rsvg-convert >/dev/null \
+      && python3 -c "from PIL import Image" \
+      && fc-match "Noto Sans CJK SC" | grep -qi "NotoSansCJK"
+  ' >/dev/null 2>&1 || fail "sandbox image is missing SVG/PNG rendering dependencies or CJK fonts"
+fi
 
 for dir in "$OPENCLAW_HOME" "$OPENCLAW_WORKSPACE"; do
   [[ -d "$dir" ]] || fail "$dir is missing"
@@ -46,6 +61,14 @@ if [[ -f "$OPENCLAW_ENV" ]]; then
     || fail "RELAY_API_BASE must use HTTPS unless it is loopback"
   [[ -n "${RELAY_API_KEY:-}" && "$RELAY_API_KEY" != replace-* ]] \
     || fail "RELAY_API_KEY is missing or still a placeholder"
+  [[ "${IMAGE_API_BASE:-}" == https://* \
+    || "${IMAGE_API_BASE:-}" == http://127.0.0.1* \
+    || "${IMAGE_API_BASE:-}" == http://localhost* ]] \
+    || fail "IMAGE_API_BASE must use HTTPS unless it is loopback"
+  [[ -n "${IMAGE_API_KEY:-}" && "$IMAGE_API_KEY" != replace-* ]] \
+    || fail "IMAGE_API_KEY is missing or still a placeholder"
+  [[ "$IMAGE_API_KEY" != "$RELAY_API_KEY" ]] \
+    || fail "image generation is reusing the chat relay key"
   gateway_token="${OPENCLAW_GATEWAY_TOKEN:-}"
   [[ ${#gateway_token} -ge 64 ]] \
     || fail "OPENCLAW_GATEWAY_TOKEN must be at least 64 characters"
@@ -73,6 +96,8 @@ jq -e '.auth.mode == "token" and .auth.allowTailscale == true and .tailscale.pre
   <<<"$gateway_cfg" >/dev/null || fail "Gateway token/Tailscale Serve auth policy drifted"
 [[ "$(jq -r '.sandbox.mode // empty' <<<"$agent_cfg")" == 'all' ]] || fail "sandbox mode must be all"
 [[ "$(jq -r '.sandbox.scope // empty' <<<"$agent_cfg")" == 'session' ]] || fail "sandbox scope must be session"
+[[ "$(jq -r '.memorySearch.enabled' <<<"$agent_cfg")" == 'false' ]] \
+  || fail "memory search must stay disabled until an embedding provider is configured"
 [[ "$(jq -r '.sandbox.docker.network // empty' <<<"$agent_cfg")" == 'none' ]] || fail "sandbox network must be none"
 [[ "$(jq -r '.sandbox.docker.readOnlyRoot // empty' <<<"$agent_cfg")" == 'true' ]] || fail "sandbox rootfs must be read-only"
 jq -e '.sandbox.workspaceAccess == "rw"
@@ -86,21 +111,34 @@ jq -e '.sandbox.workspaceAccess == "rw"
 [[ "$(jq -r '.exec.host // empty' <<<"$tools_cfg")" == 'sandbox' ]] || fail "exec host must be sandbox"
 [[ "$(jq -r '.fs.workspaceOnly // empty' <<<"$tools_cfg")" == 'true' ]] || fail "filesystem tools must be workspace-only"
 [[ "$(jq -r '.elevated.enabled' <<<"$tools_cfg")" == 'false' ]] || fail "elevated tools must be disabled"
+jq -e '(.allow // []) | index("image_generate") != null' \
+  <<<"$tools_cfg" >/dev/null || fail "image_generate must be explicitly allowed"
+jq -e '(.deny // []) | index("image_generate") == null' \
+  <<<"$tools_cfg" >/dev/null || fail "image_generate is still denied"
+jq -e '.sandbox.tools as $sandbox
+  | (($sandbox.allow // []) | index("image_generate") != null)
+    and (($sandbox.deny // []) | index("image_generate") == null)' \
+  <<<"$tools_cfg" >/dev/null || fail "sandbox image_generate policy drifted"
 jq -e '.web.search.enabled == true and .web.search.provider == "parallel-free"
   and .web.search.openaiCodex.enabled == false and .web.fetch.enabled == true' \
   <<<"$tools_cfg" >/dev/null || fail "web search/fetch policy drifted"
 jq -e '(["message", "cron", "gateway", "nodes", "sessions_spawn", "subagents", "browser"] - (.deny // [])) == []' \
   <<<"$tools_cfg" >/dev/null || fail "one or more prohibited tools are no longer denied"
 [[ "$(jq -r '.dmScope // empty' <<<"$session_cfg")" == 'per-account-channel-peer' ]] || fail "DM scope is not isolated"
+[[ "$(jq -r '.imageGenerationModel.primary // empty' <<<"$agent_cfg")" == 'lucen-image/gpt-image-2' ]] \
+  || fail "image generation model must be lucen-image/gpt-image-2"
+jq -e '.imageGenerationModel.fallbacks == [] and .imageGenerationModel.timeoutMs == 180000' \
+  <<<"$agent_cfg" >/dev/null || fail "image generation fallback or timeout policy drifted"
 
 jq -e --argjson policy "$model_policy" '
   . as $config
   | $policy.provider as $provider
   | ($policy.models | map($provider + "/" + .id) | sort) as $fullSet
   | ($policy.models | map(select(.daily) | $provider + "/" + .id) | sort) as $dailySet
+  | ($provider + "/" + $policy.defaultModelId) as $defaultModel
   | (.models | keys | sort) as $enabledSet
-  | ($enabledSet == $fullSet or $enabledSet == $dailySet)
-    and (.model.primary == $dailySet[0])
+  | (($enabledSet == $fullSet and .model.primary == $defaultModel)
+      or ($enabledSet == $dailySet and .model.primary == $dailySet[0]))
     and ((.model.fallbacks // []) == [])
     and all($policy.models[];
       . as $model
@@ -114,19 +152,42 @@ jq -e --argjson policy "$model_policy" '
         )
     )
 ' <<<"$agent_cfg" >/dev/null || fail "approved model set, aliases, or fallback policy drifted"
-jq -e '(.allow // []) | sort == ["memory-core", "openclaw-weixin", "parallel"]' \
-  <<<"$plugins_cfg" >/dev/null || fail "plugin allowlist must contain only Memory Core, Parallel, and Weixin"
+jq -e '(.allow // []) | sort == ["lucen-image", "memory-core", "openclaw-weixin", "parallel"]' \
+  <<<"$plugins_cfg" >/dev/null || fail "plugin allowlist must contain only Lucen Image, Memory Core, Parallel, and Weixin"
 jq -e '(.models // {} | to_entries) as $models | ($models | length) > 0 and ($models | all(.value.agentRuntime.id == "openclaw"))' \
   <<<"$agent_cfg" >/dev/null || fail "every allowed model must use the OpenClaw runtime"
 jq -e --argjson policy "$model_policy" '.mode == "replace"
   and .providers[$policy.provider].api == "openai-completions"
   and ((.providers[$policy.provider].models // []) | map(.id) | sort) == ($policy.models | map(.id) | sort)
-  and ((.providers[$policy.provider].models // []) | all(.agentRuntime.id == "openclaw"))' \
-  <<<"$models_cfg" >/dev/null || fail "relay provider catalog/runtime policy drifted"
+  and ((.providers[$policy.provider].models // []) | all(.agentRuntime.id == "openclaw"))
+  and .providers["lucen-image"].api == "openai-completions"
+  and ((.providers["lucen-image"].models // []) | map(.id)) == ["gpt-image-2"]
+  and .providers["lucen-image"].models[0].name == "GPT Image 2"
+  and .providers["lucen-image"].models[0].reasoning == false
+  and .providers["lucen-image"].models[0].input == ["text", "image"]
+  and (.providers["lucen-image"].apiKey | type) == "object"' \
+  <<<"$models_cfg" >/dev/null || fail "chat or image provider catalog/runtime policy drifted"
 
 openclaw approvals get --json 2>/dev/null \
   | jq -e '.file.defaults.security == "deny" and .file.defaults.ask == "off" and .file.defaults.askFallback == "deny"' >/dev/null \
   || fail "host exec approvals must be deny/off/deny"
+
+gateway_service="gui/$(id -u)/ai.openclaw.gateway"
+if launchctl print "$gateway_service" >/dev/null 2>&1; then
+  inherited_sensitive="$(launchctl print "$gateway_service" \
+    | awk '
+      /inherited environment = \{/ { in_environment=1; next }
+      in_environment && /^\t\}/ { exit }
+      in_environment && /=>/ {
+        name=$0
+        sub(/^[[:space:]]*/, "", name)
+        sub(/[[:space:]]*=>.*/, "", name)
+        if (name ~ /(API_KEY|TOKEN|SECRET|PASSWORD)$/) print name
+      }
+    ' | sort -u)"
+  [[ -z "$inherited_sensitive" ]] \
+    || fail "OpenClaw gateway inherited sensitive launchd variables: $(tr '\n' ' ' <<<"$inherited_sensitive")"
+fi
 
 ac_sleep="$(pmset -g custom | awk '/AC Power/{ac=1; next} ac && $1=="sleep"{print $2; exit}')"
 [[ "$ac_sleep" == "0" ]] || fail "AC system sleep must be 0; currently ${ac_sleep:-unknown}"
@@ -145,6 +206,8 @@ fi
 if [[ -f "$OPENCLAW_HOME/openclaw.json" ]]; then
   openclaw config validate >/dev/null || fail "OpenClaw config validation failed"
 fi
+openclaw secrets audit --check >/dev/null 2>&1 \
+  || fail "OpenClaw secret audit found plaintext, unresolved, shadowed, or legacy credentials"
 
 if (( errors > 0 )); then
   printf '\nOpenClaw preflight failed with %d issue(s).\n' "$errors" >&2

@@ -34,6 +34,7 @@ fi
 "$ROOT_DIR/scripts/openclaw-model-gate.sh"
 "$ROOT_DIR/scripts/openclaw-search-gate.sh"
 "$ROOT_DIR/scripts/openclaw-sandbox-gate.sh"
+"$ROOT_DIR/scripts/openclaw-image-gate.sh"
 
 mkdir -p "$ROOT_DIR/openclaw/test-results"
 touch "$ROOT_DIR/openclaw/test-results/READY_FOR_WEIXIN"

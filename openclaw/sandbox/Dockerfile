@@ -6,10 +6,14 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
+      fontconfig \
+      fonts-noto-cjk \
       git \
       jq \
+      librsvg2-bin \
       make \
       python3 \
+      python3-pil \
       python3-pip \
       ripgrep \
     && rm -rf /var/lib/apt/lists/* \
@@ -18,5 +22,6 @@ RUN apt-get update \
 
 USER node
 WORKDIR /workspace
+ENV XDG_CACHE_HOME=/tmp/.cache
 
 CMD ["/bin/bash"]

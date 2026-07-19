@@ -9,4 +9,4 @@ filevault_enabled || die "FileVault must be enabled first"
 
 echo "Scan the next QR code with the SECOND WeChat account only."
 openclaw channels login --channel openclaw-weixin
-openclaw gateway restart
+"$ROOT_DIR/scripts/openclaw-gateway.sh" restart

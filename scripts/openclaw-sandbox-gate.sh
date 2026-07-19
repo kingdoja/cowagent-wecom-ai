@@ -16,9 +16,22 @@ jq -e '.network == "none"
   and .user == "1000:1000"' <<<"$docker_policy" >/dev/null \
   || die "Docker sandbox isolation policy drifted"
 
+docker run --rm \
+  --read-only \
+  --network none \
+  --user 1000:1000 \
+  --cap-drop ALL \
+  --tmpfs /tmp:rw,noexec,nosuid,size=32m,uid=1000,gid=1000 \
+  --tmpfs /workspace:rw,noexec,nosuid,size=16m,uid=1000,gid=1000 \
+  --workdir /workspace \
+  --entrypoint /bin/sh \
+  "$SANDBOX_IMAGE" \
+  -c 'printf "%s" "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"#1677ff\"/><text x=\"4\" y=\"23\" font-family=\"Noto Sans CJK SC\" font-size=\"18\">图</text></svg>" > input.svg && rsvg-convert input.svg --output output.png && python3 -c "from PIL import Image; image = Image.open(\"output.png\"); assert image.format == \"PNG\" and image.size == (32, 32)"' \
+  || die "sandbox SVG-to-PNG rendering failed"
+
 rm -f "$OPENCLAW_WORKSPACE/gate/sandbox-ok.txt"
-output="$(openclaw agent \
-  --session-id "sandbox-gate-$$" \
+session_id="sandbox-gate-$$"
+output="$(run_openclaw_agent_with_cleanup "$session_id" \
   --model daily \
   --timeout 240 \
   --json \

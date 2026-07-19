@@ -1,0 +1,17 @@
+{
+  "id": "lucen-image",
+  "name": "Lucen Image",
+  "description": "OpenAI-compatible image generation through lucen.cc with an OpenAI model-name compatibility alias",
+  "activation": {
+    "onStartup": false
+  },
+  "providers": ["lucen-image"],
+  "contracts": {
+    "imageGenerationProviders": ["lucen-image", "openai"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

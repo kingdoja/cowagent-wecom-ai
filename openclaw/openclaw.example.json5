@@ -59,6 +59,20 @@
           },
         ],
       },
+      "lucen-image": {
+        baseUrl: "${IMAGE_API_BASE}",
+        apiKey: { source: "env", provider: "default", id: "IMAGE_API_KEY" },
+        auth: "api-key",
+        api: "openai-completions",
+        models: [
+          {
+            id: "gpt-image-2",
+            name: "GPT Image 2",
+            reasoning: false,
+            input: ["text", "image"],
+          },
+        ],
+      },
     },
   },
 
@@ -66,12 +80,18 @@
     defaults: {
       workspace: "~/OpenClawWorkspace",
       skills: ["healthcheck"],
+      memorySearch: { enabled: false },
       model: {
-        primary: "relay/gpt-5.4-mini",
+        primary: "relay/gpt-5.6-terra",
         fallbacks: [],
       },
       utilityModel: "relay/gpt-5.4-mini",
-      thinkingDefault: "low",
+      imageGenerationModel: {
+        primary: "lucen-image/gpt-image-2",
+        fallbacks: [],
+        timeoutMs: 180000,
+      },
+      thinkingDefault: "high",
       reasoningDefault: "on",
       timeoutSeconds: 600,
       models: {
@@ -146,6 +166,7 @@
       "web_fetch",
       "memory_search",
       "memory_get",
+      "image_generate",
     ],
     deny: [
       "browser",
@@ -163,7 +184,6 @@
       "agents_list",
       "update_plan",
       "heartbeat_respond",
-      "image_generate",
       "music_generate",
       "video_generate",
       "tts",
@@ -192,6 +212,7 @@
           "web_fetch",
           "memory_search",
           "memory_get",
+          "image_generate",
         ],
         deny: [
           "browser",
@@ -234,12 +255,13 @@
 
   plugins: {
     enabled: true,
-    allow: ["memory-core", "parallel", "openclaw-weixin"],
+    allow: ["lucen-image", "memory-core", "parallel", "openclaw-weixin"],
     bundledDiscovery: "allowlist",
     load: { paths: [] },
     slots: { memory: "memory-core" },
     entries: {
       "memory-core": { enabled: true },
+      "lucen-image": { enabled: true },
       parallel: { enabled: true },
       "openclaw-weixin": { enabled: true },
     },
@@ -273,7 +295,7 @@
     trustedProxies: ["127.0.0.1", "::1"],
     auth: {
       mode: "token",
-      token: "${OPENCLAW_GATEWAY_TOKEN}",
+      token: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
       // Tailnet identity avoids re-entering the tab-scoped Control UI token.
       // HTTP APIs still require the gateway token.
       allowTailscale: true,

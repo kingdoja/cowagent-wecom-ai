@@ -8,6 +8,7 @@
 | OpenClaw | `2026.7.1` |
 | Parallel plugin | `2026.7.1` |
 | Tencent Weixin plugin | `2.4.6` |
+| Lucen Image plugin | `1.1.0`（仓库内） |
 | Memory plugin | OpenClaw 内置 `memory-core@2026.7.1` |
 | Gateway | `127.0.0.1:18789` |
 | Sandbox image | `cowagent-openclaw-sandbox:2026.7.1` |
@@ -16,6 +17,10 @@
 不要使用 `latest`、beta、TRAE 或 `@openclaw/codex`。升级必须修改仓库中的固定版本并重新走完整验收。
 
 沙箱基础层是 Docker Official Image `node:22.22.0-bookworm-slim` 的镜像站副本，并按内容 digest 固定；这是为了绕开当前网络不可达的 Docker Hub token 服务，不会跟随标签漂移。
+
+沙箱内置 `rsvg-convert`、Pillow 和 Noto CJK 字体。微信出站图片必须是 PNG/JPEG；模型生成 SVG 概念稿时，先转为 PNG 再通过 `MEDIA:` 发送，不能直接发送 SVG。
+
+原生生图使用独立的 OpenAI 兼容端点、`IMAGE_API_KEY` 和仓库内 `lucen-image` 适配插件，默认模型为 `lucen-image/gpt-image-2`。适配器强制请求 `b64_json`，单次最多生成一张图，并将误传的 `openai/gpt-image-1.5` 兼容映射到 Lucen 的 `gpt-image-2`。聊天与生图密钥必须分离；`image_generate` 已开放，音乐、视频和 TTS 仍保持禁用。
 
 ## 1. 无密钥安装
 
@@ -45,7 +50,7 @@ make openclaw-host-power
 
 ## 3. 独立凭证与配置
 
-先创建 OpenClaw 专用中转子密钥。它必须与 CowAgent 的 `RELAY_API_KEY` 不同，并应有独立额度和撤销能力。
+先创建 OpenClaw 专用聊天中转子密钥和生图密钥。两者必须互不相同，也不能复用 CowAgent 的 `RELAY_API_KEY`，并应有独立额度和撤销能力。
 
 ```bash
 cp openclaw/openclaw.env.example openclaw/.env
@@ -69,16 +74,16 @@ make openclaw-status
 make openclaw-accept
 ```
 
-`openclaw-accept` 依次执行配置/安全审计、已开放模型的非流式文本/流式首正文/结构化工具调用、20 次日常模型、两步工具、三类搜索和沙箱隔离测试。全部通过后才生成被 Git 忽略的 `READY_FOR_WEIXIN` 标记。
+`openclaw-accept` 依次执行配置/安全审计、已开放模型的非流式文本/流式首正文/结构化工具调用、20 次日常模型、两步工具、三类搜索、沙箱隔离和一次真实生图测试。全部通过后才生成被 Git 忽略的 `READY_FOR_WEIXIN` 标记。
 
 模型规则：
 
-- `/model daily`: `relay/gpt-5.4-mini`，low，稳定日常模型。
+- `/model daily`: `relay/gpt-5.4-mini`，low，轻量 utility 与稳定性验收模型。
 - `/model smart`: `relay/gpt-5.5`，medium，需要更强推理时手动选择。
 - `/model sol`: `relay/gpt-5.6-sol`，high，高阶手动模型。
-- `/model terra`: `relay/gpt-5.6-terra`，high，高阶手动模型。
+- `/model terra`: `relay/gpt-5.6-terra`，high，OpenClaw 默认主模型。
 - `gpt-5.6-luna` 的非流式正文冒烟测试为空，暂不开放。
-- 高阶模型不参与自动 fallback，避免延迟或空正文影响日常会话。
+- 模型不互相自动 fallback；Terra 失败时明确报错，不静默切换模型。
 
 模型 ID、别名、推理等级、流式阈值和门禁退出码统一维护在 `openclaw/models.json`。验收会对所有已开放模型执行文本、流式和工具调用检查，并对 Mini 执行 20 次日常稳定性测试。Mini 不达标时脚本停止并禁止扫码；任一手动模型不达标时，降级配置只保留通过复验的 `daily`，不会留下未验证的手动别名。
 

@@ -42,5 +42,5 @@ if [[ "$dry_run" == true ]]; then
 fi
 
 openclaw config validate
-openclaw gateway restart
+"$ROOT_DIR/scripts/openclaw-gateway.sh" restart
 echo "Only the validated daily model remains selectable."

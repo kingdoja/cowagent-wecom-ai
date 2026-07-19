@@ -28,8 +28,7 @@ run_agent() {
   session_id="gate-${label}-$$-${RANDOM}"
   session_file="$OPENCLAW_HOME/agents/main/sessions/${session_id}.jsonl"
   started="$(date +%s)"
-  if output="$(openclaw agent \
-    --session-id "$session_id" \
+  if output="$(run_openclaw_agent_with_cleanup "$session_id" \
     --model "$model" \
     --message "$prompt" \
     --timeout 180 \

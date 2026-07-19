@@ -14,8 +14,7 @@ prompts=(
 for i in "${!prompts[@]}"; do
   session_id="search-gate-$((i + 1))-$$"
   session_trace="$OPENCLAW_HOME/agents/main/sessions/${session_id}.trajectory.jsonl"
-  output="$(openclaw agent \
-    --session-id "$session_id" \
+  output="$(run_openclaw_agent_with_cleanup "$session_id" \
     --model daily \
     --message "${prompts[$i]}" \
     --timeout 240 \
