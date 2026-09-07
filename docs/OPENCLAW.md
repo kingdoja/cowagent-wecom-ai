@@ -78,14 +78,14 @@ make openclaw-accept
 
 模型规则：
 
-- `/model daily`: `relay/gpt-5.4-mini`，low，轻量 utility 与稳定性验收模型。
-- `/model smart`: `relay/gpt-5.5`，medium，需要更强推理时手动选择。
-- `/model sol`: `relay/gpt-5.6-sol`，high，高阶手动模型。
-- `/model terra`: `relay/gpt-5.6-terra`，high，OpenClaw 默认主模型。
+- `/model daily`: `relay/gpt-5.6-terra`，high，当前默认主模型、utility 与稳定性验收模型。
+- 当前聊天线路为 Terra/FunCloud；Lucen 聊天线路在 2026-07-31 持续返回 HTTP 502，恢复并重新验收前不加入可选模型。
 - `gpt-5.6-luna` 的非流式正文冒烟测试为空，暂不开放。
-- 模型不互相自动 fallback；Terra 失败时明确报错，不静默切换模型。
+- 不配置自动 fallback；模型失败时明确报错，不静默切换线路。
 
-模型 ID、别名、推理等级、流式阈值和门禁退出码统一维护在 `openclaw/models.json`。验收会对所有已开放模型执行文本、流式和工具调用检查，并对 Mini 执行 20 次日常稳定性测试。Mini 不达标时脚本停止并禁止扫码；任一手动模型不达标时，降级配置只保留通过复验的 `daily`，不会留下未验证的手动别名。
+高推理模型偶发需要数分钟才返回首个可见 token，因此 relay provider 超时固定为 600 秒，Agent 总超时固定为 900 秒；两者不要倒置，否则会再次出现 `LLM request timed out`。
+
+模型 ID、别名、推理等级、流式阈值和门禁退出码统一维护在 `openclaw/models.json`。验收会对所有已开放模型执行文本、流式和工具调用检查，并对默认 `daily` 模型执行 20 次日常稳定性测试。`daily` 不达标时脚本停止并禁止扫码。
 
 搜索门禁除了检查回答中的 URL，还会读取 OpenClaw 会话轨迹，确认至少一次 `web_fetch` 成功返回正文。
 
@@ -116,6 +116,19 @@ make openclaw-rollback
 ```
 
 这个命令停止 OpenClaw Gateway 并恢复 CowAgent 容器，不删除 OpenClaw、镜像、凭证或备份。
+
+## 7. 自动巡检与自愈
+
+本机 launchd 持续监听 Gateway 日志，但不做定时健康请求。只有日志出现模型 `5xx`/`FailoverError`、微信轮询失败、通道失联，或 Docker 沙箱报告 daemon 不可用时，才触发一次完整检查和自愈：
+
+```bash
+make openclaw-self-heal-install
+make openclaw-self-heal
+```
+
+触发后的检查覆盖认证 Gateway RPC、微信长轮询心跳和一次真实聊天回复。检测到 Docker daemon 不可用时，脚本会启动 Docker Desktop，最多等待 90 秒并重新执行完整检查；恢复失败会发出 macOS 通知，且不会误切换模型线路。Gateway 或微信心跳异常时先重启 Gateway；聊天线路故障时探测备用 provider。备用线路必须连续通过两次文本、流式输出和结构化工具调用，切换后还要通过 OpenClaw 实际 Agent 回复与微信心跳检查，否则自动恢复切换前的环境和配置。同类错误事件在 5 分钟冷却窗口内只触发一次，避免上游重试风暴造成重复处理。
+
+候选线路仅配置在权限为 `0600` 的 `~/.openclaw/self-heal.env`，可参考 `openclaw/self-heal.env.example`。状态、自愈日志和事件触发日志分别位于 `~/.openclaw/self-heal-state.json`、`~/.openclaw/self-heal.log` 与 `~/.openclaw/self-heal-trigger.log`。切换前快照保留在 `~/.openclaw/self-heal-backups`。
 
 ## 管理入口
 

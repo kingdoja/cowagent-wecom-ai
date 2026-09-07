@@ -9,14 +9,14 @@ case "$action" in
   install)
     rm -f "$OPENCLAW_HOME/agents/main/agent/models.json"
     "$ROOT_DIR/scripts/openclaw-preflight.sh"
-    openclaw gateway install --force
+    openclaw gateway install --force --wrapper "$ROOT_DIR/scripts/openclaw-gateway-wrapper.sh"
     openclaw gateway start
     wait_and_scrub_openclaw_models_snapshot
     ;;
   restart)
     rm -f "$OPENCLAW_HOME/agents/main/agent/models.json"
     # Refresh launchd's managed environment after credential or provider changes.
-    openclaw gateway install --force
+    openclaw gateway install --force --wrapper "$ROOT_DIR/scripts/openclaw-gateway-wrapper.sh"
     openclaw gateway "$action"
     wait_and_scrub_openclaw_models_snapshot
     ;;

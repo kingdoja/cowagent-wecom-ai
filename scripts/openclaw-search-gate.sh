@@ -17,7 +17,7 @@ for i in "${!prompts[@]}"; do
   output="$(run_openclaw_agent_with_cleanup "$session_id" \
     --model daily \
     --message "${prompts[$i]}" \
-    --timeout 240 \
+    --timeout "$OPENCLAW_RUN_TIMEOUT_SECONDS" \
     --json)"
   reply="$(jq -r '[.result.payloads[]? | select(.isError != true and .isReasoning != true) | .text // empty] | join("\n")' <<<"$output")"
   urls="$(grep -Eo 'https?://[^[:space:]>)"]+' <<<"$reply" || true)"

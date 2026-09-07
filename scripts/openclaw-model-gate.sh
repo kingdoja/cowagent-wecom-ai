@@ -31,7 +31,7 @@ run_agent() {
   if output="$(run_openclaw_agent_with_cleanup "$session_id" \
     --model "$model" \
     --message "$prompt" \
-    --timeout 180 \
+    --timeout "$OPENCLAW_RUN_TIMEOUT_SECONDS" \
     --json 2>/dev/null)"; then
     command_ok=true
   else

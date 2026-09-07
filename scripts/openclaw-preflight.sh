@@ -87,6 +87,11 @@ plugins_cfg="$(config_json plugins)"
 models_cfg="$(config_json models)"
 model_policy="$(jq -c . "$OPENCLAW_MODELS_FILE")"
 
+[[ "$(jq -r '.providers.relay.timeoutSeconds // 0' <<<"$models_cfg")" == "$OPENCLAW_MODEL_TIMEOUT_SECONDS" ]] \
+  || fail "relay provider timeout must be ${OPENCLAW_MODEL_TIMEOUT_SECONDS}s"
+[[ "$(jq -r '.timeoutSeconds // 0' <<<"$agent_cfg")" == "$OPENCLAW_AGENT_TIMEOUT_SECONDS" ]] \
+  || fail "Agent timeout must be ${OPENCLAW_AGENT_TIMEOUT_SECONDS}s"
+
 [[ "$(jq -r '.mode // empty' <<<"$gateway_cfg")" == 'local' ]] || fail "gateway.mode must be local"
 [[ "$(jq -r '.bind // empty' <<<"$gateway_cfg")" == 'loopback' ]] || fail "gateway.bind must be loopback"
 [[ "$(jq -r '.port // 0' <<<"$gateway_cfg")" == '18789' ]] || fail "gateway.port must be 18789"

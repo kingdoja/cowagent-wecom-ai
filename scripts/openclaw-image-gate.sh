@@ -30,7 +30,7 @@ trap cleanup EXIT
 output="$(openclaw agent \
   --session-id "$session_id" \
   --model terra \
-  --timeout 300 \
+  --timeout "$OPENCLAW_RUN_TIMEOUT_SECONDS" \
   --json \
   --message 'Call image_generate exactly once to generate one 1:1 PNG showing a single white geometric object on a blue studio background. No text, logo, or watermark. Do not use exec, write, SVG, or any other image method. Wait for the image generation completion event.')"
 

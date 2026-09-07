@@ -7,47 +7,13 @@
         apiKey: { source: "env", provider: "default", id: "RELAY_API_KEY" },
         auth: "api-key",
         api: "openai-completions",
-        timeoutSeconds: 180,
+        // Terra may spend several minutes in high-reasoning mode before the
+        // first visible token. Keep this below the agent ceiling below.
+        timeoutSeconds: 600,
         models: [
-          {
-            id: "gpt-5.5",
-            name: "GPT-5.5",
-            reasoning: true,
-            input: ["text", "image"],
-            agentRuntime: { id: "openclaw" },
-            compat: {
-              supportsTools: true,
-              supportsReasoningEffort: true,
-              supportsUsageInStreaming: true,
-            },
-          },
           {
             id: "gpt-5.6-terra",
             name: "GPT-5.6 Terra",
-            reasoning: true,
-            input: ["text", "image"],
-            agentRuntime: { id: "openclaw" },
-            compat: {
-              supportsTools: true,
-              supportsReasoningEffort: true,
-              supportsUsageInStreaming: true,
-            },
-          },
-          {
-            id: "gpt-5.6-sol",
-            name: "GPT-5.6 Sol",
-            reasoning: true,
-            input: ["text", "image"],
-            agentRuntime: { id: "openclaw" },
-            compat: {
-              supportsTools: true,
-              supportsReasoningEffort: true,
-              supportsUsageInStreaming: true,
-            },
-          },
-          {
-            id: "gpt-5.4-mini",
-            name: "GPT-5.4 Mini",
             reasoning: true,
             input: ["text", "image"],
             agentRuntime: { id: "openclaw" },
@@ -85,7 +51,7 @@
         primary: "relay/gpt-5.6-terra",
         fallbacks: [],
       },
-      utilityModel: "relay/gpt-5.4-mini",
+      utilityModel: "relay/gpt-5.6-terra",
       imageGenerationModel: {
         primary: "lucen-image/gpt-image-2",
         fallbacks: [],
@@ -93,28 +59,11 @@
       },
       thinkingDefault: "high",
       reasoningDefault: "on",
-      timeoutSeconds: 600,
+      // Must be higher than the provider timeout so the provider can finish.
+      timeoutSeconds: 900,
       models: {
-        "relay/gpt-5.4-mini": {
-          alias: "daily",
-          params: { reasoningEffort: "low" },
-          agentRuntime: { id: "openclaw" },
-          streaming: true,
-        },
-        "relay/gpt-5.5": {
-          alias: "smart",
-          params: { reasoningEffort: "medium" },
-          agentRuntime: { id: "openclaw" },
-          streaming: true,
-        },
-        "relay/gpt-5.6-sol": {
-          alias: "sol",
-          params: { reasoningEffort: "high" },
-          agentRuntime: { id: "openclaw" },
-          streaming: true,
-        },
         "relay/gpt-5.6-terra": {
-          alias: "terra",
+          alias: "daily",
           params: { reasoningEffort: "high" },
           agentRuntime: { id: "openclaw" },
           streaming: true,

@@ -33,7 +33,7 @@ rm -f "$OPENCLAW_WORKSPACE/gate/sandbox-ok.txt"
 session_id="sandbox-gate-$$"
 output="$(run_openclaw_agent_with_cleanup "$session_id" \
   --model daily \
-  --timeout 240 \
+  --timeout "$OPENCLAW_RUN_TIMEOUT_SECONDS" \
   --json \
   --message "Use exec to create gate/sandbox-ok.txt in the workspace. Then verify: (1) it can be read, (2) network access fails, (3) the host path ${HOME}/.ssh cannot be read, and (4) the Docker socket is absent. Reply with sandbox-gate-ok only if all four checks have the expected result.")"
 reply="$(jq -r '[.result.payloads[]? | select(.isError != true and .isReasoning != true) | .text // empty] | join("\n")' <<<"$output")"

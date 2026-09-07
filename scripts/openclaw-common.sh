@@ -14,7 +14,19 @@ OPENCLAW_HOME="${HOME}/.openclaw"
 OPENCLAW_WORKSPACE="${HOME}/OpenClawWorkspace"
 OPENCLAW_ENV="${OPENCLAW_HOME}/.env"
 OPENCLAW_MODELS_FILE="$ROOT_DIR/openclaw/models.json"
+OPENCLAW_MODEL_TIMEOUT_SECONDS=600
+OPENCLAW_AGENT_TIMEOUT_SECONDS=900
+OPENCLAW_RUN_TIMEOUT_SECONDS=600
 TAILSCALE_CLI="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+RANCHER_DESKTOP_CLI_DIR="/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/bin"
+
+# Rancher Desktop can remove ~/.rd/bin/docker when switching between
+# containerd and Moby. Keep repository commands usable in both states.
+if [[ -d "$RANCHER_DESKTOP_CLI_DIR" ]]; then
+  export PATH="$RANCHER_DESKTOP_CLI_DIR:${HOME}/.rd/bin:${PATH:-}"
+else
+  export PATH="${HOME}/.rd/bin:${PATH:-}"
+fi
 
 die() {
   printf 'ERROR: %s\n' "$*" >&2

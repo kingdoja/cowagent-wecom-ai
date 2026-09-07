@@ -70,7 +70,7 @@ if [[ ! -f "$workspace_tools" ]]; then
 # TOOLS.md - Local Notes
 EOF
 fi
-if ! grep -Fq "$workspace_tools_marker" "$workspace_tools"; then
+if ! grep -Fq -- "$workspace_tools_marker" "$workspace_tools"; then
   cat >> "$workspace_tools" <<'EOF'
 
 ## Sandbox path rules
@@ -83,7 +83,7 @@ if ! grep -Fq "$workspace_tools_marker" "$workspace_tools"; then
 EOF
 fi
 workspace_image_marker="## Image generation"
-if ! grep -Fq "$workspace_image_marker" "$workspace_tools"; then
+if ! grep -Fq -- "$workspace_image_marker" "$workspace_tools"; then
   cat >> "$workspace_tools" <<'EOF'
 
 ## Image generation
@@ -95,7 +95,7 @@ if ! grep -Fq "$workspace_image_marker" "$workspace_tools"; then
 EOF
 fi
 workspace_image_model_rule='- Always set `model` to `lucen-image/gpt-image-2`. Never use an `openai/...` model name in this environment.'
-if ! grep -Fq "$workspace_image_model_rule" "$workspace_tools"; then
+if ! grep -Fq -- "$workspace_image_model_rule" "$workspace_tools"; then
   cat >> "$workspace_tools" <<'EOF'
 
 ## Image generation model

@@ -2,7 +2,8 @@
 	openclaw-install openclaw-host-status openclaw-host-power openclaw-configure openclaw-preflight \
 	openclaw-gateway-install openclaw-start openclaw-stop openclaw-restart openclaw-status \
 	openclaw-audit openclaw-model-gate openclaw-search-gate openclaw-sandbox-gate \
-	openclaw-relay-gate openclaw-image-gate openclaw-accept openclaw-weixin-login openclaw-backup openclaw-rollback
+	openclaw-relay-gate openclaw-image-gate openclaw-accept openclaw-weixin-login openclaw-backup openclaw-rollback \
+	openclaw-self-heal openclaw-self-heal-install
 
 bootstrap:
 	@./scripts/bootstrap.sh
@@ -71,6 +72,12 @@ openclaw-restart:
 
 openclaw-status:
 	@./scripts/openclaw-status.sh
+
+openclaw-self-heal:
+	@./scripts/openclaw-self-heal.sh
+
+openclaw-self-heal-install:
+	@./scripts/openclaw-self-heal-install.sh
 
 openclaw-audit:
 	@./scripts/openclaw-audit.sh
